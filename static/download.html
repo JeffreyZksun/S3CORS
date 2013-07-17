@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html> 
+  <head>
+    <title>Download file from S3 with CORS API</title> 
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+	<script src='http://ajax.googleapis.com/ajax/libs/jquery/1.6.4/jquery.min.js'></script>
+    <script src='http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.16/jquery-ui.min.js'></script> 
+	<script>		
+		function download() {
+
+			$.ajax({
+				url: "https://s3.amazonaws.com/123d_test/config.xml",
+				type: "GET",
+				dataType: "text",
+				success: function (data, textStatus,jqXHR) 
+							 { alert(data.toString()); console.log(data);}, 
+				error: function (data, textStatus, jqXHR) 
+							 {alert("error"); console.log(textStatus);}
+				});
+			}
+	</script>
+  </head>
+
+  <body> 
+	<button  onclick="download()">Download file from S3 with CORS API</button >
+  </body>
+</html>
