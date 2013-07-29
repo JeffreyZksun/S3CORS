@@ -6,22 +6,43 @@
 	<script src='http://ajax.googleapis.com/ajax/libs/jquery/1.6.4/jquery.min.js'></script>
     <script src='http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.16/jquery-ui.min.js'></script> 
 	<script>		
+		var bucket = 'your_bucket'; // your_bucket
 		function download() {
-
+			var str = '';
 			$.ajax({
-				url: "https://s3.amazonaws.com/123d_test/config.xml",
+				url: "https://s3.amazonaws.com/" + bucket+ "/config.xml",
 				type: "GET",
 				dataType: "text",
+				async: false,
 				success: function (data, textStatus,jqXHR) 
-							 { alert(data.toString()); console.log(data);}, 
+							 { str = data.toString();}, 
 				error: function (data, textStatus, jqXHR) 
 							 {alert("error"); console.log(textStatus);}
 				});
+				
+				alert(str);
+			}
+			
+		function checkExisting() {
+			var str = '';
+			$.ajax({
+				url: "https://s3.amazonaws.com/" + bucket+ "/1375080747801.txt",
+				type: "HEAD",
+				dataType: "text",
+				async: false,
+				success: function (data, textStatus,jqXHR) 
+							 { alert("exist"); str = data.toString();}, 
+				error: function (data, textStatus, jqXHR) 
+							 {alert("not exist - " + textStatus); console.log(textStatus);}
+				});
+				
+				//alert(str);
 			}
 	</script>
   </head>
 
   <body> 
 	<button  onclick="download()">Download file from S3 with CORS API</button >
+	<button  onclick="checkExisting()">Check if file exists with CORS API</button >
   </body>
 </html>

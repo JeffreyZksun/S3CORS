@@ -6,24 +6,130 @@
 	<script src='http://ajax.googleapis.com/ajax/libs/jquery/1.6.4/jquery.min.js'></script>
     <script src='http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.16/jquery-ui.min.js'></script> 
     <script src='sha1.js'></script> 
-	<script>		
-		function authorizedUpload() {
-			var bucket = 'your bucket';
-			var AWSSecretKeyId = 'your key id';
-			var AWSSecretAccessKey='your access key';
-			
-			var POLICY_JSON = { "expiration": "2020-12-01T12:00:00.000Z",
-				"conditions": [
-					{"bucket": bucket},
-					["starts-with", "$key", ""],
-					{"acl": 'public-read'},                           
-					["starts-with", "$Content-Type", ""],
-					["content-length-range", 0, 524288000]
-				]
-			  };
+	<script>
 
-			var policyBase64 = btoa(JSON.stringify(POLICY_JSON));
-			var signature = b64_hmac_sha1(AWSSecretAccessKey, policyBase64);
+		var bucket = 'your_bucket'; // your bucket name
+		var AWSSecretKeyId = 'your AWSSecretKeyId'; // your AWSSecretKeyId
+		var AWSSecretAccessKey='your  AWSSecretAccessKey'; // your  AWSSecretAccessKey
+		
+		var POLICY_JSON = { "expiration": "2020-12-01T12:00:00.000Z",
+			"conditions": [
+				{"bucket": bucket},
+				["starts-with", "$key", ""],
+				{"acl": "public-read"},                           
+				["starts-with", "$Content-Type", ""],
+				["content-length-range", 0, 524288000]
+			]
+		  };
+
+		var policyBase64 = btoa(JSON.stringify(POLICY_JSON));
+		var signature = b64_hmac_sha1(AWSSecretAccessKey, policyBase64);
+		
+		/* Array of bytes to base64 string decoding */
+		function b64ToUint6 (nChr) {
+
+		  return nChr > 64 && nChr < 91 ?
+			  nChr - 65
+			: nChr > 96 && nChr < 123 ?
+			  nChr - 71
+			: nChr > 47 && nChr < 58 ?
+			  nChr + 4
+			: nChr === 43 ?
+			  62
+			: nChr === 47 ?
+			  63
+			:
+			  0;
+
+		}
+		function base64DecToArr (sBase64, nBlocksSize) {
+
+		  var
+			sB64Enc = sBase64.replace(/[^A-Za-z0-9\+\/]/g, ""), nInLen = sB64Enc.length,
+			nOutLen = nBlocksSize ? Math.ceil((nInLen * 3 + 1 >> 2) / nBlocksSize) * nBlocksSize : nInLen * 3 + 1 >> 2, taBytes = new Uint8Array(nOutLen);
+
+		  for (var nMod3, nMod4, nUint24 = 0, nOutIdx = 0, nInIdx = 0; nInIdx < nInLen; nInIdx++) {
+			nMod4 = nInIdx & 3;
+			nUint24 |= b64ToUint6(sB64Enc.charCodeAt(nInIdx)) << 18 - 6 * nMod4;
+			if (nMod4 === 3 || nInLen - nInIdx === 1) {
+			  for (nMod3 = 0; nMod3 < 3 && nOutIdx < nOutLen; nMod3++, nOutIdx++) {
+				taBytes[nOutIdx] = nUint24 >>> (16 >>> nMod3 & 24) & 255;
+			  }
+			  nUint24 = 0;
+
+			}
+		  }
+
+		  return taBytes;
+		}
+		
+		
+		function authorizedUploadText() {
+
+			var fd = new FormData();
+
+			var key = (new Date).getTime() + '.txt';
+
+			fd.append('key', key);
+			fd.append('acl', 'public-read'); 
+			fd.append('Content-Type', 'text/plain' );     
+			fd.append('AWSAccessKeyId', AWSSecretKeyId);
+			
+			// Omit the policy and signature for simplify.
+			fd.append('policy', policyBase64)
+			fd.append('signature',signature);
+
+			var textData = "This is a string";		
+			fd.append("file",textData);
+			$.ajax({
+				url: 'https://'+bucket+'.s3.amazonaws.com/',
+				type: "POST",
+				data: fd,
+				processData: false,
+				contentType: false,
+				async: false,
+				success: function (data, textStatus,jqXHR) 
+							 { alert("success");}, 
+				error: function (data, textStatus, jqXHR) 
+							 {alert("fail - " + textStatus); console.log(textStatus);}
+				});
+		  }
+		  
+		  
+		  function authorizedUploadBinaryFomBase64() {
+
+			var fd = new FormData();
+
+			var key = (new Date).getTime() + '.obj';
+
+			fd.append('key', key);
+			fd.append('acl', 'public-read'); 
+			fd.append('Content-Type', 'text/plain' );     
+			fd.append('AWSAccessKeyId', AWSSecretKeyId);
+			
+			// Omit the policy and signature for simplify.
+			fd.append('policy', policyBase64)
+			fd.append('signature',signature);
+
+			var base64String = "QmFzZSA2NCDigJQgTW96aWxsYSBEZXZlbG9wZXIgTmV0d29yaw==";
+			var myBuffer = base64DecToArr(base64String).buffer; // ArrayBuffer object			
+			var blob = new Blob([myBuffer], { "type" : "application/octet-binary" });			
+			fd.append("file",blob);
+			$.ajax({
+				url: 'https://'+bucket+'.s3.amazonaws.com/',
+				type: "POST",
+				data: fd,
+				processData: false,
+				contentType: false,
+				async: false,
+				success: function (data, textStatus,jqXHR) 
+							 { alert("success");}, 
+				error: function (data, textStatus, jqXHR) 
+							 {alert("fail - " + textStatus); console.log(textStatus);}
+				});
+		  }
+		  
+		  function authorizedUploadFile() {
 
 			var file = document.getElementById('file').files[0];
 			var fd = new FormData();
@@ -54,7 +160,7 @@
 		  
 		  function anonymousUpload() {
 			// This is the anonymous upload. It requires the bucket permission is "Grant every upload/delete permissions".
-			var bucket = 'your bucket';
+			
 			
 			var file = document.getElementById('file').files[0];
 			var fd = new FormData();
@@ -108,7 +214,9 @@
 		  <input type="file" name="file" id="file"/>
 		</div>
 		<div class="row">
-		  <input type="button" onclick="authorizedUpload()" value="Authorized Upload" />
+		  <input type="button" onclick="authorizedUploadFile()" value="Authorized Upload File" /> </br>
+		  <input type="button" onclick="authorizedUploadText()" value="Authorized Upload text" /> </br>
+		  <input type="button" onclick="authorizedUploadBinaryFomBase64()" value="Authorized Upload birary from base64" /> </br>
 		  <input type="button" onclick="anonymousUpload()" value="Anonymous Upload" />
 		</div>
 		<div id="progressNumber"></div>
